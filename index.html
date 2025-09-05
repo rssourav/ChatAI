@@ -1,0 +1,220 @@
+<!DOCTYPE html><html lang="bn">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BOSS – AI Chat Simulator</title>
+  <style>
+    :root{
+      --bg:#0f1220; --panel:#161a2b; --text:#e8ecff; --muted:#95a0c8; --accent:#7c9cff; --accent2:#2ee6a6; --danger:#ff6b6b;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text);}
+    .container{max-width:760px;margin:0 auto;display:flex;flex-direction:column;height:100dvh}
+    header{padding:14px 16px;background:linear-gradient(90deg,var(--panel),#1b2036);position:sticky;top:0;z-index:2;border-bottom:1px solid #232847}
+    header h1{margin:0;font-size:18px;letter-spacing:.5px}
+    header small{color:var(--muted)}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+select,button,input[type="range"]{background:#0e1324;color:var(--text);border:1px solid #262d52;border-radius:10px;padding:8px 10px}
+button{cursor:pointer}
+button.primary{background:var(--accent);border-color:transparent;color:#0e1030;font-weight:600}
+button.ghost{background:transparent}
+
+#log{flex:1;overflow:auto;padding:12px 12px 120px;scroll-behavior:smooth}
+.msg{display:flex;gap:10px;margin:10px 0;align-items:flex-start}
+.msg .bubble{max-width:78%;padding:10px 12px;border-radius:14px;line-height:1.35;border:1px solid #242a4b}
+.msg.user{justify-content:flex-end}
+.msg.user .bubble{background:#1c2240}
+.msg.bot .bubble{background:#121733}
+.avatar{width:32px;height:32px;border-radius:50%;flex:0 0 auto;background:#20264a;display:grid;place-items:center;font-size:14px;color:var(--muted);border:1px solid #2c3566}
+
+.composer{position:fixed;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(15,18,32,.2),rgba(15,18,32,.9));border-top:1px solid #242a4b;padding:10px}
+.composer .inner{max-width:760px;margin:0 auto;display:flex;gap:8px}
+.composer input[type="text"]{flex:1;padding:12px 12px;border-radius:12px;border:1px solid #273059;background:#0f1330;color:var(--text)}
+
+.meta{font-size:12px;color:var(--muted);margin-top:6px}
+.typing{display:inline-block;width:34px}
+.dot{height:7px;width:7px;margin:0 2px;background:var(--muted);border-radius:50%;display:inline-block;opacity:.4;animation:blink 1.2s infinite}
+.dot:nth-child(2){animation-delay:.2s}
+.dot:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+
+.pill{background:#0e1324;border:1px solid #273059;color:var(--muted);padding:3px 8px;border-radius:999px;font-size:12px}
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🤖 BOSS – AI Chat <span class="pill">Simulator</span></h1>
+      <div class="toolbar">
+        <label>
+          Persona:
+          <select id="persona">
+            <option value="friendly" selected>Friendly helper</option>
+            <option value="teacher">Teacher</option>
+            <option value="comedian">Comedian</option>
+            <option value="sarcastic">Sarcastic (mild)</option>
+          </select>
+        </label>
+        <label>
+          Randomness:
+          <input type="range" id="temp" min="0" max="100" value="30" />
+        </label>
+        <button id="clear" class="ghost">Clear Chat</button>
+        <button id="export" class="ghost">Export .txt</button>
+      </div>
+      <small>Offline, no server needed. Works on phone browser. Saves locally.</small>
+    </header><main id="log" aria-live="polite"></main>
+
+<div class="composer">
+  <div class="inner">
+    <input id="input" type="text" placeholder="মেসেজ লিখুন… (Enter পাঠাবে)" autocomplete="off" />
+    <button id="send" class="primary">Send</button>
+  </div>
+  <div class="meta" id="status"></div>
+</div>
+
+  </div>  <script>
+  // --- Simple AI Chat *Simulator* (no backend, all in-browser) ---
+  const logEl = document.getElementById('log');
+  const inputEl = document.getElementById('input');
+  const sendBtn = document.getElementById('send');
+  const statusEl = document.getElementById('status');
+  const personaEl = document.getElementById('persona');
+  const tempEl = document.getElementById('temp');
+  const clearBtn = document.getElementById('clear');
+  const exportBtn = document.getElementById('export');
+
+  const memoryKey = 'boss-ai-sim-v1';
+  let convo = load();
+  if (convo.length === 0) greet(); else renderAll();
+
+  function save(){ localStorage.setItem(memoryKey, JSON.stringify(convo)); }
+  function load(){ try{ return JSON.parse(localStorage.getItem(memoryKey)||'[]'); }catch{ return []; } }
+
+  function greet(){
+    const hello = {
+      role:'bot',
+      text:'হাই! আমি আপনার অফলাইন AI chat সিমুলেটর। যেকোনো কিছু জিজ্ঞেস করুন—আমি ফোনের ব্রাউজারেই উত্তর দেব।',
+      t: Date.now()
+    };
+    convo.push(hello); save(); render(hello);
+  }
+
+  function renderAll(){ logEl.innerHTML=''; convo.forEach(render); setTimeout(()=>logEl.scrollTop=logEl.scrollHeight,0); }
+
+  function render(msg){
+    const row = document.createElement('div');
+    row.className = 'msg ' + (msg.role==='user'?'user':'bot');
+    const av = document.createElement('div'); av.className='avatar'; av.textContent = msg.role==='user'?'U':'AI';
+    const bubble = document.createElement('div'); bubble.className='bubble'; bubble.innerText = msg.text;
+    row.appendChild(av); row.appendChild(bubble); logEl.appendChild(row);
+  }
+
+  function typing(on=true){
+    if(on){
+      statusEl.innerHTML = 'AI is typing <span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>';
+    } else statusEl.textContent = '';
+  }
+
+  function noise(){ // randomness based on slider
+    const t = Number(tempEl.value)||0; return Math.random() < t/100;
+  }
+
+  // Simple intent rules
+  const rules = [
+    { re: /(hi|hello|hey|হাই|সালাম)/i, fn: ()=>'হ্যালো! কেমন আছেন? আমি কীভাবে সাহায্য করতে পারি?' },
+    { re: /(time|সময়|সময়)/i, fn: ()=> 'এখন সময়: ' + new Date().toLocaleTimeString() },
+    { re: /(date|তারিখ)/i, fn: ()=> 'আজকের তারিখ: ' + new Date().toLocaleDateString() },
+    { re: /(joke|মজা|জোক)/i, fn: ()=> pick([
+      'একজন প্রোগ্রামার বলে: “আমার problem না, feature!”',
+      'Bug আর mosquito—দুজনেই রাতে বেশি active 😅',
+      'কোড যদি প্রথমে চলে, সন্দেহ করো—কমেন্ট লিখতে ভুলেছো!',
+    ]) },
+    { re: /(calc|calculate|গণিত|যোগ|বিয়োগ|গুণ|ভাগ)/i, fn: (q)=>basicCalc(q) },
+    { re: /(weather|আবহাওয়া)/i, fn: ()=> 'এই সিমুলেটর অফলাইন—আবহাওয়ার live ডেটা নেই, তবে আপনি শহরের নাম বললে একটি কাল্পনিক আবহাওয়া বলবো 😄' },
+    { re: /(name|তোমার নাম)/i, fn: ()=> personaIntro() },
+  ];
+
+  const personas = {
+    friendly: (text)=> `নিশ্চয়ই! ${text}`,
+    teacher: (text)=> `শিক্ষকের মতো বুঝিয়ে বলি: ${text}`,
+    comedian: (text)=> `হাহা! কথা বলি হালকা স্টাইলে: ${text}`,
+    sarcastic: (text)=> `ঠিক আছে, খুবই গভীর বিষয় 🙃 ${text}`,
+  };
+
+  function personaIntro(){
+    const p = personaEl.value;
+    switch(p){
+      case 'teacher': return 'আমি শিক্ষক মুডে আছি—ধাপে ধাপে বোঝাই!';
+      case 'comedian': return 'আমি আজকে একটু ফানি মুডে আছি 😄';
+      case 'sarcastic': return 'আজকে আমি একটু রসিক (সৌম্য) মুডে!';
+      default: return 'আমি বন্ধুসুলভ সহকারী—বলুন কীভাবে সাহায্য করবো!';
+    }
+  }
+
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)] }
+
+  function basicCalc(q){
+    // extract simple expressions like 2+2, 10*5, 12/3, 7-4
+    const m = (q.match(/(-?\d+\s*[+\-*\/xX]\s*-?\d+)/) || [])[0];
+    if(!m) return 'কোনো সহজ গণিত এক্সপ্রেশন পেলাম না। যেমন: 12 + 7';
+    const expr = m.toLowerCase().replace('x','*');
+    try{ // VERY basic eval (safe-ish for digits/operators)
+      if(!/^[-\d+*\/\s.]+$/.test(expr)) return 'এই গণিতটা আমি ধরতে পারিনি।';
+      // eslint-disable-next-line no-eval
+      const val = eval(expr);
+      return `ফলাফল: ${expr} = ${val}`;
+    }catch{ return 'উফ! ক্যালকুলেশন করতে গিয়ে আটকে গেলাম।'; }
+  }
+
+  function respond(userText){
+    // rule-based match
+    for(const r of rules){
+      if(r.re.test(userText)){
+        const ans = r.fn(userText);
+        return styleByPersona(ans);
+      }
+    }
+    // fallback replies with light randomness
+    const base = pick([
+      'মজার প্রশ্ন! একটু বিস্তারিত বলবেন?',
+      'আমি বুঝেছি আপনি কী জানতে চান—আরেকটু context দিন।',
+      'চমৎকার! আরো বলুন, আমি সাহায্য করার চেষ্টা করি।',
+      'এটা নিয়ে দুইটা মতামত আছে—আপনারটা কী?',
+    ]);
+    if(noise()) return styleByPersona(base + ' (র‌্যান্ডম ভাবনা যোগ হলো)');
+    return styleByPersona(base);
+  }
+
+  function styleByPersona(text){
+    const p = personaEl.value; return personas[p](text);
+  }
+
+  async function send(){
+    const text = (inputEl.value||'').trim();
+    if(!text) return;
+    const user = {role:'user', text, t: Date.now()};
+    convo.push(user); render(user); save(); inputEl.value=''; inputEl.focus();
+
+    typing(true);
+    await wait(400 + Math.random()*900);
+    const bot = {role:'bot', text: respond(text), t: Date.now()};
+    typing(false);
+    convo.push(bot); render(bot); save();
+    setTimeout(()=>logEl.scrollTop=logEl.scrollHeight,0);
+  }
+
+  function wait(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+  sendBtn.addEventListener('click', send);
+  inputEl.addEventListener('keydown', e=>{ if(e.key==='Enter') send(); });
+  clearBtn.addEventListener('click', ()=>{ if(confirm('সব মেসেজ মুছে ফেলবেন?')){ convo=[]; save(); renderAll(); greet(); }});
+
+  exportBtn.addEventListener('click', ()=>{
+    const lines = convo.map(m=>`[${new Date(m.t).toLocaleString()}] ${m.role.toUpperCase()}: ${m.text}`);
+    const blob = new Blob([lines.join('\n')], {type:'text/plain'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'boss-ai-chat.txt'; a.click(); URL.revokeObjectURL(a.href);
+  });
+  </script></body>
+  </html>
