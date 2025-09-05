@@ -2,7 +2,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BOSS – AI Chat Simulator</title>
+  <title>ChatChat – AI Chat Simulator</title>
   <style>
     :root{
       --bg:#0f1220; --panel:#161a2b; --text:#e8ecff; --muted:#95a0c8; --accent:#7c9cff; --accent2:#2ee6a6; --danger:#ff6b6b;
@@ -44,10 +44,10 @@ button.ghost{background:transparent}
 <body>
   <div class="container">
     <header>
-      <h1>🤖 BOSS – AI Chat <span class="pill">Simulator</span></h1>
+      <h1>🤖 ChatChat – AI Chat <span class="pill">Simulator</span></h1>
       <div class="toolbar">
         <label>
-          Persona:
+          Personal:
           <select id="persona">
             <option value="friendly" selected>Friendly helper</option>
             <option value="teacher">Teacher</option>
@@ -62,12 +62,12 @@ button.ghost{background:transparent}
         <button id="clear" class="ghost">Clear Chat</button>
         <button id="export" class="ghost">Export .txt</button>
       </div>
-      <small>Offline, no server needed. Works on phone browser. Saves locally.</small>
+      <small>Developed By Shwapnoneel Sourav.</small>
     </header><main id="log" aria-live="polite"></main>
 
 <div class="composer">
   <div class="inner">
-    <input id="input" type="text" placeholder="মেসেজ লিখুন… (Enter পাঠাবে)" autocomplete="off" />
+    <input id="input" type="text" placeholder="মেসেজ লিখুন… " autocomplete="off" />
     <button id="send" class="primary">Send</button>
   </div>
   <div class="meta" id="status"></div>
@@ -94,7 +94,7 @@ button.ghost{background:transparent}
   function greet(){
     const hello = {
       role:'bot',
-      text:'হাই! আমি আপনার অফলাইন AI chat সিমুলেটর। যেকোনো কিছু জিজ্ঞেস করুন—আমি ফোনের ব্রাউজারেই উত্তর দেব।',
+      text:'হাই! আমি Shwapnoneel Sourav এর দ্বারা সৃষ্টি করা AI chat সিমুলেটর। বলুন আপনাকে কিভাবে সহায়তা করতে পারি?',
       t: Date.now()
     };
     convo.push(hello); save(); render(hello);
@@ -122,7 +122,7 @@ button.ghost{background:transparent}
 
   // Simple intent rules
   const rules = [
-    { re: /(hi|hello|hey|হাই|সালাম)/i, fn: ()=>'হ্যালো! কেমন আছেন? আমি কীভাবে সাহায্য করতে পারি?' },
+    { re: /(hi|hello|hey|হাই|)/i, fn: ()=>'হ্যালো! কেমন আছেন? আমি কীভাবে সাহায্য করতে পারি?' },
     { re: /(time|সময়|সময়)/i, fn: ()=> 'এখন সময়: ' + new Date().toLocaleTimeString() },
     { re: /(date|তারিখ)/i, fn: ()=> 'আজকের তারিখ: ' + new Date().toLocaleDateString() },
     { re: /(joke|মজা|জোক)/i, fn: ()=> pick([
